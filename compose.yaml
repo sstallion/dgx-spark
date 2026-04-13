@@ -1,0 +1,106 @@
+name: spark
+
+x-nvidia-gpu: &nvidia-gpu
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
+  ipc: host
+  ulimits:
+    memlock: -1
+    stack: 67108864
+
+x-vllm: &vllm
+  <<: [*nvidia-gpu]
+  image: spark-vllm
+  restart: unless-stopped
+  volumes:
+    - huggingface:/root/.cache/huggingface
+
+services:
+  home:
+    build: .
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+  bifrost:
+    image: maximhq/bifrost:v1.4.22
+    ports:
+      - 127.0.0.1:4000:8080
+    volumes:
+      - bifrost:/app/data
+
+  vllm:
+    build:
+      context: .
+      dockerfile: Dockerfile.vllm
+    profiles: [vllm]
+
+  vllm-Qwen3-Coder-Next:
+    <<: [*vllm]
+    command: >
+      Intel/Qwen3-Coder-Next-int4-AutoRound
+        --enable-auto-tool-choice
+        --tool-call-parser qwen3_xml
+        --max-model-len 256K
+        --served-model-name Qwen3-Coder-Next
+        --load-format fastsafetensors
+        --gpu-memory-utilization 0.80
+        --kv-cache-dtype fp8
+        --enable-prefix-caching
+        --mamba-cache-mode align
+        --max-num-batched-tokens 8K
+        --enable-chunked-prefill
+        --optimization-level 3
+        --performance-mode throughput
+    environment:
+      - HF_TOKEN
+      - VLLM_MARLIN_USE_ATOMIC_ADD=1
+      - VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=1
+      - VLLM_USE_FLASHINFER_MOE_FP8=1
+    profiles: [Qwen3-Coder-Next]
+
+  vllm-gemma-4-26B-A4B-it:
+    <<: [*vllm]
+    command: >
+      cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit
+        --enable-auto-tool-choice
+        --tool-call-parser gemma4
+        --max-model-len 256K
+        --served-model-name gemma-4-26B-A4B-it
+        --load-format fastsafetensors
+        --reasoning-parser gemma4
+        --gpu-memory-utilization 0.80
+        --kv-cache-dtype fp8
+        --enable-prefix-caching
+        --max-num-batched-tokens 8K
+        --enable-chunked-prefill
+        --optimization-level 3
+        --performance-mode throughput
+    environment:
+      - HF_TOKEN
+      - VLLM_MARLIN_USE_ATOMIC_ADD=1
+      - VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=1
+      - VLLM_USE_FLASHINFER_MOE_FP8=1
+    profiles: [gemma-4-26B-A4B-it]
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main-slim
+    ports:
+      - 127.0.0.1:8080:8080
+    restart: unless-stopped
+    volumes:
+      - open-webui:/app/backend/data
+
+volumes:
+  bifrost:
+  caddy_config:
+  caddy_data:
+  huggingface:
+  open-webui:

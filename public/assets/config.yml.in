@@ -1,0 +1,19 @@
+---
+# Homepage configuration
+# See https://fontawesome.com/search for icons options
+
+services:
+  - name: Applications
+    items:
+      - name: Bifrost
+        logo: assets/tools/bifrost.png
+        subtitle: High-performance AI gateway
+        url: https://${SPARK_HOME_FQDN}:4000
+      - name: Open WebUI
+        logo: assets/tools/open-webui.png
+        subtitle: Self-hosted AI platform
+        url: https://${SPARK_HOME_FQDN}:8080
+      - name: DGX Dashboard
+        icon: fa-solid fa-download
+        subtitle: System monitoring and updates
+        url: https://${SPARK_HOME_FQDN}:11000

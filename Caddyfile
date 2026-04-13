@@ -1,0 +1,31 @@
+{
+	admin off
+	default_bind {$SPARK_HOME_BIND}
+}
+
+(tls) {
+	tls /etc/caddy/cert.pem /etc/caddy/key.pem
+}
+
+{$SPARK_HOME_FQDN} {
+	import tls
+	file_server
+}
+
+# Bifrost
+{$SPARK_HOME_FQDN}:4000 {
+	import tls
+	reverse_proxy 127.0.0.1:4000
+}
+
+# Open WebUI
+{$SPARK_HOME_FQDN}:8080 {
+	import tls
+	reverse_proxy 127.0.0.1:8080
+}
+
+# DGX Dashboard
+{$SPARK_HOME_FQDN}:11000 {
+	import tls
+	reverse_proxy 127.0.0.1:11000
+}
